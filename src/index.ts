@@ -6,14 +6,18 @@ import * as restify from 'restify';
 // Import required bot services.
 // See https://aka.ms/bot-services to learn more about the different parts of a bot.
 import { BotFrameworkAdapter } from 'botbuilder';
+import { QnAMaker, LuisRecognizer } from 'botbuilder-ai';
+import { config } from 'dotenv';
 
 // This bot's main dialog.
-import { EmptyBot } from './bot';
+import { ConferenceBot } from './ConferenceBot';
+
+config()
 
 // Create HTTP server.
 const server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, () => {
-    console.log(`\n${ server.name } listening to ${ server.url }`);
+    console.log(`\n${server.name} listening to ${server.url}`);
 });
 
 // Create adapter.
@@ -28,12 +32,12 @@ adapter.onTurnError = async (context, error) => {
     // This check writes out errors to console log .vs. app insights.
     // NOTE: In production environment, you should consider logging this to Azure
     //       application insights.
-    console.error(`\n [onTurnError] unhandled error: ${ error }`);
+    console.error(`\n [onTurnError] unhandled error: ${error}`);
 
     // Send a trace activity, which will be displayed in Bot Framework Emulator
     await context.sendTraceActivity(
         'OnTurnError Trace',
-        `${ error }`,
+        `${error}`,
         'https://www.botframework.com/schemas/error',
         'TurnError'
     );
@@ -44,12 +48,23 @@ adapter.onTurnError = async (context, error) => {
 };
 
 // Create the main dialog.
-const myBot = new EmptyBot();
+const conferenceBot = new ConferenceBot(
+    new QnAMaker({
+        endpointKey: "",
+        knowledgeBaseId: "",
+        host: ""
+    }),
+    new LuisRecognizer({
+        endpointKey: "",
+        endpoint: "",
+        applicationId: ""
+    })
+);
 
 // Listen for incoming requests.
 server.post('/api/messages', (req, res) => {
     adapter.processActivity(req, res, async (context) => {
         // Route to main dialog.
-        await myBot.run(context);
+        await conferenceBot.run(context);
     });
 });
